@@ -30,6 +30,7 @@
    saying what it does. The comments are graded.
    ========================================================================== */
 
+show databases;
 
 CREATE DATABASE IF NOT EXISTS cis_students_db;
 USE cis_students_db;
@@ -129,34 +130,70 @@ SELECT * FROM student_scores;
 -- STEP 4. Look at the counters the server is keeping
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+-- check the counters information_schema tables
+-- two rows come back
+
+SELECT table_name, auto_increment
+FROM information_schema.tables
+WHERE table_schema = 'cis_students_db'
+AND auto_increment IS NOT NULL;
 
 
 -- =================================================================
 -- STEP 5. Create the attendance table, starting its key at 500
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+-- creates an attendance table starting with key of 500
+
+CREATE TABLE IF NOT EXISTS attendance(
+  attendance_id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL, 
+  attended_on DATE,
+  status VARCHAR(10),
+  foreign key (student_id) REFERENCES students(student_id)
+
+)AUTO_INCREMENT = 500;
 
 
 -- =================================================================
 -- STEP 6. Add three attendance rows and watch the ids
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+-- Add 3 attendence rows using the INSERT clause
+-- Include the column names that correspond to the values
+INSERT INTO attendance (student_id, attended_on, status) values
+(1,'2026-10-05', 'present'),
+(2, '2026-10-05', 'present'),
+(3,'2026-10-06','present');
 
+SELECT * FROM attendance;
+describe attendance;
 
 -- =================================================================
 -- STEP 7. DELETE and TRUNCATE on a scrap table
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+-- create the scrap table using id with auto_increment
+-- and label varchar(10)
 
+USE cis_students_db;
 
+analyze table scrap;
+TRUNCATE table scrap;
+CREATE table if not exists scrap (
+  id int auto_increment primary key, 
+  label varchar(10)
+);
+
+DESCRIBE scrap;
+
+SELECT * from scrap;
+INSERT into scrap value(null,'hello');
+INSERT into scrap value(null,'world');
+INSERT into scrap value(null,'friend');
+DELETE FROM scrap;
+TRUNCATE TABLE scrap;
+drop table scrap;
 -- =================================================================
 -- STEP 8. A BEFORE INSERT trigger that fills in what you left out
 --
@@ -164,26 +201,64 @@ SELECT * FROM student_scores;
 -- down to END, so select the whole block and run the selection.
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+--creates a trigger that runs before the table is created
+-- runs while the row is still on its way in, so it can change it
+CREATE TRIGGER trg_attendance_before_insert
+BEFORE INSERT ON attendance
+FOR EACH ROW
+BEGIN
+-- no date supplied, so use today's
+IF NEW.attended_on IS NULL THEN
+SET NEW.attended_on = CURDATE();
+END IF;
+-- store the status in capitals whatever case it arrived in
+SET NEW.status = UPPER(NEW.status);
+END
 
 
 -- =================================================================
 -- STEP 9. An AFTER DELETE trigger, the gap Lab 5d left open
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+-- this is a trigger when a delete row occurs
+-- a deleted score changes the average just as much as a new one
+CREATE TRIGGER trg_scores_after_delete
+AFTER DELETE ON test_scores
+FOR EACH ROW
+BEGIN
+-- OLD is the row that has just gone. there is no NEW here,
+-- because nothing was written
+UPDATE students
+SET gpa = calculate_gpa(OLD.student_id)
+WHERE student_id = OLD.student_id;
+END
 
 
 -- =================================================================
 -- STEP 10. Prove both triggers work
 -- =================================================================
 
--- your comment goes here
--- your statements go here
+-- insert student attendance fpr student 4.
+-- include null for the date
+-- the status is lowercase 'present'
+
+INSERT into attendance values (null, 4, null, 'present');
+SELECT * FROM attendance;
+
+--insert test_score for Jenna student 1, quiz4, score = 100
+DESCRIBE test_scores;
+INSERT into test_scores values (null, 'quiz4', 1, 100);
+
+UPDATE students
+set gpa =calculate_gpa(student_id)
+where student_id = 1;
 
 
+select * from students;
+SELECT * FROM test_scores;
+
+DELETE from test_scores
+WHERE test_name = 'quiz4';
 -- =================================================================
 -- STEP 11 and 12. Push to GitHub and submit the URL
 -- Nothing to write here. Follow the handout.
